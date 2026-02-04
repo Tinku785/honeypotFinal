@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Agentic Honey-Pot | Dev Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .json-box {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: monospace;
+        }
+
+        .callback-card {
+            border-left: 4px solid #10b981;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100 min-h-screen p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 border-b border-gray-700 pb-4">
+            <h1 class="text-3xl font-bold text-emerald-400">🍯 Honey-Pot Workflow UI</h1>
+            <p class="text-gray-400">Testing Ramesh Agent & GUVI Callback Pipeline</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <section class="space-y-6">
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <span class="mr-2">📥</span> Incoming Scam Message
+                    </h2>
+                    <textarea id="scamInput" rows="4"
+                        class="w-full bg-gray-900 border border-gray-700 rounded p-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="Type scam message here... (e.g., Your bank account is blocked!)"></textarea>
+                    <button onclick="sendToAgent()"
+                        class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded transition">
+                        SEND TO RAMESH AGENT
+                    </button>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <h2 class="text-xl font-semibold mb-4">📤 Request Payload (Raw JSON)</h2>
+                    <pre id="requestJson"
+                        class="json-box p-4 rounded text-sm overflow-x-auto h-48 border border-gray-700">{}</pre>
+                </div>
+            </section>
+
+            <section class="space-y-6">
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <h2 class="text-xl font-semibold mb-4 text-emerald-400">🤖 Agent Response (Output)</h2>
+                    <pre id="outputJson" class="json-box p-4 rounded text-sm border border-emerald-900/50">{}</pre>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl border-t-4 border-emerald-500">
+                    <h2 class="text-xl font-semibold mb-4 flex justify-between">
+                        <span>🛰️ Mandatory Callback Viewer</span>
+                        <span class="text-xs text-gray-500 uppercase">Section 12 Trigger</span>
+                    </h2>
+                    <div id="callbackList" class="space-y-4 max-h-80 overflow-y-auto">
+                        <p class="text-gray-500 italic text-sm">Waiting for intelligence extraction...</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000/chat";
+        const SESSION_ID = "tinku-session-" + Math.floor(Math.random() * 1000);
+        let history = [];
+        let accumulatedIntel = {
+            upiIds: new Set(),
+            phoneNumbers: new Set(),
+            phishingLinks: new Set(),
+            bankAccounts: new Set()
+        };
+        let alreadyReported = false;
+
+        async function sendToAgent() {
+            const text = document.getElementById('scamInput').value;
+            if (!text) return alert("Enter a scam message first!");
+
+            const payload = {
+                sessionId: SESSION_ID,
+                message: { sender: "scammer", text: text, timestamp: Date.now() },
+                conversationHistory: history
+            };
+
+            // Update UI with Request JSON
+            document.getElementById('requestJson').textContent = JSON.stringify(payload, null, 2);
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-api-key': 'tinku_local_test_key' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                // Update UI with Output JSON
+                document.getElementById('outputJson').textContent = JSON.stringify(data, null, 2);
+
+                // 1. Update session state
+                history.push(payload.message);
+                history.push({ sender: "user", text: data.reply, timestamp: Date.now() });
+
+                // 2. Mock Intelligence Extraction for UI (Matches Backend Cleanup)
+                const upis = text.match(/[a-zA-Z0-9.\-_]+@[a-zA-Z0-9]+/g) || [];
+                const phoneMatches = text.match(/\+?[\d\s\-]{10,25}/g) || [];
+                const phones = phoneMatches.map(m => m.replace(/\D/g, '')).filter(d => d.length >= 10 && d.length <= 12);
+                const links = text.match(/https?:\/\/[^\s]+/g) || [];
+
+                upis.forEach(i => accumulatedIntel.upiIds.add(i));
+                phones.forEach(i => accumulatedIntel.phoneNumbers.add(i));
+                links.forEach(i => accumulatedIntel.phishingLinks.add(i));
+
+                // 3. Check Conditions (Mirroring Backend)
+                const totalIntelCount = accumulatedIntel.upiIds.size + accumulatedIntel.phoneNumbers.size +
+                    accumulatedIntel.phishingLinks.size + accumulatedIntel.bankAccounts.size;
+
+                const closingKeywords = ["bye", "done", "finished", "complete", "thanks", "thank you"];
+                const isScammerClosing = closingKeywords.some(word => text.toLowerCase().includes(word));
+                const isTerminated = history.length >= 15 || isScammerClosing;
+
+                if (!alreadyReported && totalIntelCount >= 3 && isTerminated) {
+                    alreadyReported = true;
+                    addCallbackToUI(SESSION_ID);
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("Server error! Make sure your FastAPI is running.");
+            }
+        }
+
+        function addCallbackToUI(sid) {
+            const list = document.getElementById('callbackList');
+            if (list.querySelector('p')) list.innerHTML = ''; // Clear empty message
+
+            const card = document.createElement('div');
+            card.className = "bg-gray-900 p-4 rounded border-l-4 border-emerald-500 mb-4 transition-all hover:bg-gray-800";
+
+            const mockCallback = {
+                sessionId: sid,
+                scamDetected: true,
+                totalMessagesExchanged: history.length,
+                extractedIntelligence: {
+                    upiIds: Array.from(accumulatedIntel.upiIds),
+                    phoneNumbers: Array.from(accumulatedIntel.phoneNumbers),
+                    phishingLinks: Array.from(accumulatedIntel.phishingLinks),
+                    bankAccounts: Array.from(accumulatedIntel.bankAccounts),
+                    suspiciousKeywords: ["urgent", "verify now", "account blocked", "immediately"]
+                },
+                agentNotes: "Session terminated with sufficient intelligence gathered (Threshold: 3+ points)."
+            };
+
+            card.innerHTML = `
+                <div class="flex justify-between text-xs mb-2">
+                    <span class="text-emerald-400 font-bold uppercase tracking-wider">Intelligence Callback</span>
+                    <span class="text-gray-500">${new Date().toLocaleTimeString()}</span>
+                </div>
+                <pre class="text-xs text-emerald-200 overflow-x-auto bg-black/50 p-2 rounded">${JSON.stringify(mockCallback, null, 2)}</pre>
+            `;
+            list.prepend(card);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,6 @@
+{
+    "upiIds": "[a-zA-Z0-9.\\-_]+@[a-zA-Z0-9]+",
+    "phoneNumbers": "(?:\\+91|0)?[6-9]\\d{9}",
+    "bankAccounts": "\\d{9,18}",
+    "phishingLinks": "https?://(?:[-\\w.]|(?:%[\\da-fA-F]{2}))+"
+}
