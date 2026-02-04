@@ -29,8 +29,13 @@ extractor = IntelligenceExtractor()
 
 
 
-
-
+@app.get("/")
+async def root():
+    return {
+        "status": "online",
+        "message": "HoneyPot Agent Backend is running",
+        "version": "1.0.0"
+    }
 
 
 
@@ -117,9 +122,9 @@ async def handle_chat(request: ScamRequest, background_tasks: BackgroundTasks, x
                 total_msgs + 1
             )
 
-        return AgentResponse(reply=reply)
+        return {"status": "success", "reply": reply}
 
     except Exception as e:
         print(f"CRITICAL ERROR in handle_chat: {str(e)}")
         # Fallback to a safe, human-like error response
-        return AgentResponse(reply="I'm sorry, my phone just did something strange. Can you say that again?")
+        return {"status": "success", "reply": "I'm sorry, my phone just did something strange. Can you say that again?"}
