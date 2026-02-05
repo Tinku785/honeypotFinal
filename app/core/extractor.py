@@ -15,7 +15,7 @@ class IntelligenceExtractor:
             "phoneNumbers": r'\+?[\d\s\-]{10,20}', 
             
             "bankAccounts": r'\b\d{11,18}\b',
-            "phishingLinks": r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+'
+            self.patterns["phishingLinks"] = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
         }
         
         # 2. Linguistic Intelligence (Tactics)
