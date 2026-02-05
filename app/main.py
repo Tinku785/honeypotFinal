@@ -108,7 +108,7 @@ async def process_honeypot_logic(payload: dict, background_tasks: BackgroundTask
         # Requirement: Minimum 2-3 intelligence points (Lowered to 2 for easier testing validation)
         is_terminated = total_msgs >= 15 
         
-        if session_intel[sid]["scamDetected"] and sid not in reported_sessions and total_intel_count >= 4:
+        if session_intel[sid]["scamDetected"] and sid not in reported_sessions and total_intel_count >= 3:
             # We fire the callback once high-value intel is found, even before terminal turn 15
             reported_sessions.add(sid)
             background_tasks.add_task(
