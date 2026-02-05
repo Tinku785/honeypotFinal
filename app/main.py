@@ -102,13 +102,13 @@ async def process_honeypot_logic(payload: dict, background_tasks: BackgroundTask
         # 6. TERMINATION & REPORTING LOGIC
         total_intel_count = sum(len(session_intel[sid][k]) for k in ["upiIds", "phoneNumbers", "bankAccounts", "phishingLinks"])
         
-        closing_keywords = ["bye", "done", "finished", "complete", "thanks", "thank you"]
+        
         is_scammer_closing = any(word in incoming_text.lower() for word in closing_keywords)
         
         # Requirement: Minimum 2-3 intelligence points (Lowered to 2 for easier testing validation)
         is_terminated = total_msgs >= 15 or is_scammer_closing
         
-        if session_intel[sid]["scamDetected"] and sid not in reported_sessions and total_intel_count >= 2:
+        if session_intel[sid]["scamDetected"] and sid not in reported_sessions and total_intel_count >= 4:
             # We fire the callback once high-value intel is found, even before terminal turn 15
             reported_sessions.add(sid)
             background_tasks.add_task(
