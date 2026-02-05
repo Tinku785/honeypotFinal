@@ -14,7 +14,7 @@ class IntelligenceExtractor:
             # Generic Phone Regex: Matches sequences of digits, +, -, and spaces
             "phoneNumbers": r'\+?[\d\s\-]{10,20}', 
             
-            "bankAccounts": r'\b\d{9,18}\b',
+            "bankAccounts": r'\b\d{11,18}\b',
             "phishingLinks": r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+'
         }
         
